@@ -1,0 +1,7 @@
+removeOldFiles:
+    c_drive:
+        c_logs:
+            path: "d:/logs/"
+            extensions: "err,log,out"
+            dirPatterns:  "dpa"
+            age: 1000
