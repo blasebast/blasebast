@@ -1,0 +1,13 @@
+vbell off
+defscrollback 19999
+startup_message off
+shell bash
+setenv PS1 '\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\033k\033\\\]\$ '
+hardstatus alwayslastline
+hardstatus string '%{gk}[ %{G}%H %{g}][%= %{wk}%?%-Lw%?%{=b kR}(%{W}%n*%f %t%?(%u)%?%{=b kR})%{= kw}%?%+Lw%?%?%= %{g}][%{Y}%l%{g}]%{=b C}[ %m/%d %c ]%{W}'
+screen -t seba1 0
+screen -t seba2 1
+screen -t seba3 2
+screen -t root1 3 ssh root@localhost
+screen -t root2 4 ssh root@localhost
+
