@@ -1,4 +1,5 @@
 vbell off
+termcapinfo xterm* ti@:te@
 defscrollback 19999
 startup_message off
 shell bash
