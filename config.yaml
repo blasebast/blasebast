@@ -1,7 +1,11 @@
 removeOldFiles:
     c_drive:
-        c_logs:
-            path: "d:/logs/"
+        c_downloads:
+            path: "c:/downloads"
             extensions: "err,log,out"
-            dirPatterns:  "dpa"
-            age: 1000
+            age: 2
+
+removeOldFilesSchedule:
+  days: 'MON,TUE,WED,THU,FRI'
+  time: '12:00'
+  taskname: 'remove_old_files'

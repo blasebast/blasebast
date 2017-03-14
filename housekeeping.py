@@ -1,15 +1,15 @@
 import argparse
 import logging
 import os
-import re
 import shutil
 import sys
 import time
-import yaml
 from subprocess import call
 
+import yaml
+
 yamlFound = None
-print("current script: %s") % __file__
+print("current script: %s" % (__file__))
 for file in os.listdir(os.path.dirname(__file__)):
     if file.endswith(".yaml"):
         yamlFound = file
@@ -31,6 +31,12 @@ logPath = args.logPath
 if not logPath:
     if not os.name == 'posix': logPath = 'c:/temp'; python = "c:/python27/python.exe"
     else: logPath = '/tmp'; python = "/usr/bin/python"
+else:
+    if not os.name == 'posix':
+        python = "c:/python27/python.exe"
+    else:
+        python = "/usr/bin/python"
+
 if not os.path.exists(logPath):
     os.makedirs(logPath)
 
@@ -48,8 +54,6 @@ logger.setFormatter(formatter)
 logging.getLogger('').addHandler(logger)
 # END LOGGING
 
-logging.info("test logging")
-
 # VARIABLES
 if os.path.exists("config.yaml"):
     yamlFile = "config.yaml"
@@ -60,10 +64,9 @@ try:
     yamlFile
 except:
     raise
-executableFile = os.path.join(os.path.basename(__file__))
+executableFile = os.path.abspath(os.path.join(os.path.basename(__file__)))
 stream = open(os.path.join(os.path.dirname(__file__), yamlFile), 'r')
 yamlStream = yaml.load(stream)
-print yamlStream
 
 
 def check_age(path):
@@ -101,14 +104,14 @@ def delete_files_by_age(extension='log', age=10, path="c:/testing_workspace", *a
                     except:
                         logging.error("cannot delete %s, but proceeding with rest" % filepath)
 
-def create_scheduled_task(recycleWeekDay, recycleWeekDayTime, executableFile, taskName="housekeepingTask"):
+def create_scheduled_task(recycleWeekDay, recycleWeekDayTime, executableFile, taskName):
     removeScheduledTaskCmd = "SCHTASKS /Delete /TN %s /F" % (taskName)
-    addScheduledTaskCmd = "SCHTASKS /Create /NP /SC weekly /D %s /TN %s /ST %s /TR \"%s\"" % (recycleWeekDay,taskName,recycleWeekDayTime,python + executableFile + " -createTask no -logPath %s") % (logPath)
+    addScheduledTaskCmd = "SCHTASKS /Create /NP /SC weekly /D %s /TN %s /ST %s /TR \"%s\"" % (recycleWeekDay,taskName,recycleWeekDayTime,python + " " + executableFile + " -createTask no -logPath %s") % (logPath)
     logging.info("command for removing scheduled task is: %s" % removeScheduledTaskCmd)
     logging.info("command for adding scheduled task is: %s" % addScheduledTaskCmd)
 
-    #call(removeScheduledTaskCmd,shell=True)
-    #call(addScheduledTaskCmd,shell=True)
+    call(removeScheduledTaskCmd,shell=True)
+    call(addScheduledTaskCmd,shell=True)
 
 try:
     for resource, settings in yamlStream['removeOldFiles']['c_drive'].items():
@@ -132,15 +135,18 @@ except:
     raise
 
 if args.createTask == "yes" and os.path.exists(os.path.normpath(python)):
+    print(yamlStream['removeOldFilesSchedule'])
     try:
-        recycleWeekDay = yaml['removeOldLogsSchedule']['recycleWeekDay']
-        recycleWeekDayTime = yaml['removeOldLogsSchedule']['recycleWeekDayTime']
+        recycleWeekDay = yamlStream['removeOldFilesSchedule']['days']
+        recycleWeekDayTime = yamlStream['removeOldFilesSchedule']['time']
+        taskName = yamlStream['removeOldFilesSchedule']['taskname']
         create_scheduled_task(recycleWeekDay,recycleWeekDayTime,executableFile,taskName)
     except:
         logging.warn("incorrectly enabled task?")
     try:
         src = os.path.join(os.path.dirname(__file__),"yaml")
         dst = os.path.join("yaml")
+        if not os.path.exists(dst): os.makedirs(dst)
         if not os.path.exists(dst):
             shutil.copytree(src,dst)
             logging.info("copied yaml lib to %s" % dst)
