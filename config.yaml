@@ -1,9 +1,16 @@
 removeOldFiles:
     c_drive:
         c_downloads:
-            path: "c:/downloads"
+            move_only: "c:/users/blasiak/ddownloads/archived"
+            path: "c:/users/blasiak/ddownloads"
             extensions: "err,log,out"
             age: 2
+        c_temp:
+              move_only: ""
+              path: "c:/temp"
+              extensions: "err,log,out"
+              dirpatterns: ""
+              age: 0
 
 removeOldFilesSchedule:
   days: 'MON,TUE,WED,THU,FRI'

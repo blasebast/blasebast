@@ -47,6 +47,7 @@ logging.basicConfig(level=logging.DEBUG,
                     datefmt='%Y-%m-%d %H:%M:%S',
                     filename=os.path.join(logPath,'%s_%s.log') % (os.path.basename(__file__), time.strftime('%Y%m%d%H%M%S')),
                     filemode='w')
+log_file_name = os.path.normpath(os.path.join(logPath,'%s_%s.log') % (os.path.basename(__file__), time.strftime('%Y%m%d%H%M%S')))
 logger = logging.StreamHandler()
 logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)-16s %(levelname)-8s %(message)s')
@@ -64,7 +65,7 @@ try:
     yamlFile
 except:
     raise
-executableFile = os.path.abspath(os.path.join(os.path.basename(__file__)))
+executableFile =os.path.abspath(__file__)
 stream = open(os.path.join(os.path.dirname(__file__), yamlFile), 'r')
 yamlStream = yaml.load(stream)
 
@@ -78,31 +79,49 @@ def check_age(path):
         logging.error("cannot stat the file '%s', access denied?" % path)
         return 0
 
-def delete_files_by_age(extension='log', age=10, path="c:/testing_workspace", *args):
+def delete_files_by_age(extension, age, path, move_only, *args):
     if len(args) > 0:
         dirPattern = args[0]
         for root, dirs, files in os.walk(path):
             for dir in dirs:
                 if str(dir).__contains__(str(dirPattern)):
                     dirPath = os.path.join(root,dir)
-                    if checkAge(dirPath) > age:
-                        itsAge = checkAge(dirPath)
-                        logging.info("deleting %s, age is: %s days" % (os.path.join(path,dir),itsAge))
+                    if check_age(dirPath) >= age:
+                        itsAge = check_age(dirPath)
                         try:
-                            shutil.rmtree(os.path.join(root,dir))
+                            target = os.path.join(root,dir)
+                            shutil.rmtree(target)
+                            if move_only is ".":
+                                logging.info("deleting %s, age is: %s days" % (os.path.join(path,dir),itsAge))
+                                shutil.rmtree(target)
+                            else:
+                                if not os.path.exists(move_only):
+                                    try: os.makedirs(path)
+                                    except: logging.error("cannot create path: %s" % (move_only))
+                                logging.info("moving %s, age is: %s days [dest: %s]" % (os.path.join(path,dir),itsAge,move_only))
+                                shutil.move(target,os.path.normpath(move_only))
                         except:
-                            logging.error("cannot remove %s" % (os.path.join(root,dir)))
+                            raise
+
     for root, dirs, files in os.walk(path):
         for file in files:
-            if file.endswith(extension):
-                filepath = os.path.join(root,file)
-                if checkAge(filepath) > age:
-                    try:
-                        itsAge = checkAge(filepath)
-                        logging.info("removing %s, age is: %s days" % (filepath,itsAge))
-                        os.remove(filepath)
-                    except:
-                        logging.error("cannot delete %s, but proceeding with rest" % filepath)
+            for extension in extensions:
+                if file.endswith(extension):
+                    filepath = os.path.normpath(os.path.join(root,file))
+                    if check_age(filepath) >= age and filepath != log_file_name:
+                        try:
+                            itsAge = check_age(filepath)
+                            if move_only is ".":
+                                logging.info("removing %s, age is: %s days" % (filepath,itsAge))
+                                os.unlink(filepath)
+                            else:
+                                if not os.path.exists(move_only):
+                                    try: os.makedirs(path)
+                                    except: logging.error("cannot create path: %s" % (move_only))
+                                logging.info("moving %s, age is: %s days [dest: %s]" % (filepath,itsAge, move_only))
+                                shutil.move(filepath, move_only)
+                        except:
+                            logging.error("cannot move / delete %s, but proceeding with rest" % filepath)
 
 def create_scheduled_task(recycleWeekDay, recycleWeekDayTime, executableFile, taskName):
     removeScheduledTaskCmd = "SCHTASKS /Delete /TN %s /F" % (taskName)
@@ -119,23 +138,24 @@ try:
             path = settings['path']
             extensions = settings['extensions']
             age = settings['age']
+            move_only = os.path.normpath(settings['move_only'])
         except:
             logging.error("yaml structure is not as expected, it should contain path, extension and age in it's structure" % (yamlFile))
         for extension in extensions.split(','):
+            delete_files_by_age(extension,age,path, move_only)
             try:
-                delete_files_by_age(extensions,age,path)
+                delete_files_by_age(extension,age,path, move_only)
             except:
                 logging.error("cannot delete extension %s on %s" % (extension,path))
         try:
-            dirPatterns = settings['dirPatterns']
-            for dirPattern in dirPatterns.split(','):
-                delete_files_by_age(extension,age,path,dirPattern)
+            dirpatterns = settings['dirpatterns']
+            for dirpattern in dirpatterns.split(','):
+                delete_files_by_age(extension,age,path,move_only,dirpattern)
         except: IOError
 except:
     raise
 
 if args.createTask == "yes" and os.path.exists(os.path.normpath(python)):
-    print(yamlStream['removeOldFilesSchedule'])
     try:
         recycleWeekDay = yamlStream['removeOldFilesSchedule']['days']
         recycleWeekDayTime = yamlStream['removeOldFilesSchedule']['time']
@@ -155,11 +175,3 @@ if args.createTask == "yes" and os.path.exists(os.path.normpath(python)):
 else:
     if not os.path.exists(python):
         logging.error("%s doesn't exist" % python)
-
-
-
-
-
-
-
-
